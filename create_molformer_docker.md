@@ -88,3 +88,24 @@ docker commit \
   molformer-interactive \
   molformer-env:latest
 ```
+
+**Step 6: Install moleformer
+The Molformer repository does not have setup.py
+
+```bash
+git clone https://github.com/IBM/molformer.git
+cd molformer      
+# First, navigate to the cloned repository
+cd /path/to/your/molformer
+
+# Append the export command to your user's bash profile
+# This assumes you cloned molformer into /workspace/molformer
+echo 'export PYTHONPATH="${PYTHONPATH}:/workspace/molformer"' >> ~/.bashrc
+
+# Source the file to apply the changes to your current session immediately
+source ~/.bashrc
+
+# Verify that it's set
+echo $PYTHONPATH
+   
+```
