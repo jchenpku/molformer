@@ -1,0 +1,117 @@
+That is an excellent point and a crucial piece of information. Using a forked repository that already contains the necessary patches (setup.py and relative import fixes) is a much cleaner and more direct solution. It simplifies the Dockerfile significantly by removing the need for sed commands and manual file modifications during the build process.
+
+Thank you for pointing this out. I will incorporate this into the final, definitive Dockerfile and manual setup instructions. This makes the entire process much more robust and easier to follow.
+
+Final, Best Practice Dockerfile (Using the Patched Fork)
+
+This version is simpler, cleaner, and more maintainable.
+
+Generated Dockerfile
+# Use a modern NVIDIA CUDA base image compatible with RTX 40-series
+FROM nvidia/cuda:11.8.0-devel-ubuntu20.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Install system dependencies, Python 3.8, and pip
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    wget \
+    ca-certificates \
+    python3.8 \
+    python3-pip && \
+    ln -sf /usr/bin/python3 /usr/bin/python && \
+    rm -rf /var/lib/apt/lists/*
+
+# --- Python Package Installation Stages ---
+
+# Stage 1: Upgrade build tools and pin networkx for compatibility
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install networkx==2.8.8
+
+# Stage 2: Install PyTorch for CUDA 11.8
+RUN pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 --index-url https://download.pytorch.org/whl/cu118
+
+# Stage 3: Install all other Python packages
+RUN pip install \
+    numpy pandas scikit-learn scipy \
+    rdkit-pypi \
+    transformers==4.6.0 \
+    pytorch-lightning==1.5.10 \
+    pytorch-fast-transformers==0.4.0 \
+    datasets==1.6.2 \
+    pyarrow lmdb lancedb tqdm
+
+# Stage 4: Compile and install the LATEST version of Apex (compatible with PyTorch 2.x)
+RUN git clone https://github.com/NVIDIA/apex /tmp/apex && \
+    cd /tmp/apex && \
+    export TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9" && \
+    pip install -v --no-cache-dir --no-build-isolation ./ --global-option="--cpp_ext" --global-option="--cuda_ext" && \
+    cd / && rm -rf /tmp/apex && \
+    rm -rf ~/.cache/pip
+
+# --- MolFormer Project Setup (using the patched fork) ---
+
+# Stage 5: Clone the patched MolFormer repository
+RUN git clone https://github.com/jchenpku/molformer.git /app/molformer
+WORKDIR /app/molformer
+
+# Stage 6: Install the MolFormer package in editable mode.
+# This works because the fork contains a setup.py file.
+RUN pip install -e .
+
+# Set the default command
+CMD ["bash"]
+
+Key Improvements with This Approach:
+
+No PYTHONPATH Needed: Because pip install -e . is used, the package is properly registered with Python. The ENV PYTHONPATH line is no longer necessary, which is cleaner.
+
+No Manual Patching: The Dockerfile no longer needs sed commands or manual file copying. The git clone command gets the already-fixed code.
+
+Simplicity and Readability: The Dockerfile is now much easier to understand. It just clones and installs packages.
+
+Corresponding Final Manual Installation Steps
+
+This reflects the simplified process using the patched fork.
+
+Start your base Docker container: docker run -it --gpus all ... nvidia/cuda:11.8.0-devel-ubuntu20.04 bash
+
+Install system tools: apt-get update && apt-get install ...
+
+Install Python packages:
+
+pip install --upgrade pip setuptools wheel && pip install networkx==2.8.8
+
+pip install torch==2.0.1+cu118 ...
+
+pip install ... (all other dependencies)
+
+Install Apex:
+
+git clone https://github.com/NVIDIA/apex /tmp/apex
+
+cd /tmp/apex
+
+export TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9"
+
+pip install -v --no-cache-dir --no-build-isolation ./ --global-option="--cpp_ext" --global-option="--cuda_ext"
+
+cd / && rm -rf /tmp/apex
+
+Clone and Install the Patched MolFormer:
+
+Generated bash
+git clone https://github.com/jchenpku/molformer.git /workspace/molformer
+cd /workspace/molformer
+pip install -e .
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Bash
+IGNORE_WHEN_COPYING_END
+
+You are now ready to run your run_pipeline.py and generate_embeddings.py scripts. Because the package is properly installed, the imports like from training.train_pubchem_light import LightningModule will work correctly from any directory. This is the ideal final setup. Thank you for finding and suggesting the patched repository.
