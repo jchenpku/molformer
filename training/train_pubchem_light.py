@@ -4,20 +4,20 @@ import torch
 import shutil
 import rdkit
 from torch import nn
-import args
+from . import args
 import os
 import numpy as np
 import random
 import getpass
 from datasets import load_dataset, concatenate_datasets, load_from_disk
-from pubchem_encoder import Encoder
+from .pubchem_encoder import Encoder
 import pytorch_lightning as pl
 from pytorch_lightning.utilities import rank_zero_warn, rank_zero_only, seed
 from pytorch_lightning.callbacks import LearningRateMonitor
 
 from fast_transformers.builders import TransformerEncoderBuilder
 from fast_transformers.masking import LengthMask as LM
-from rotate_attention.rotate_builder import RotateEncoderBuilder as rotate_builder
+from .rotate_attention.rotate_builder import RotateEncoderBuilder as rotate_builder
 #from fast_trans_code.builders import TransformerEncoderBuilder as rotate_builder
 from fast_transformers.feature_maps import Favor,GeneralizedRandomFeatures
 import torch.nn.functional as F
