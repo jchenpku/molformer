@@ -1,7 +1,7 @@
 import time
 import torch
 from torch import nn
-import args
+from . import args
 import torch.nn.functional as F
 import os
 import numpy as np
@@ -11,7 +11,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.utilities import rank_zero_warn, rank_zero_only, seed
 from tokenizer.tokenizer import MolTranBertTokenizer
 from fast_transformers.masking import LengthMask as LM
-from rotate_attention.rotate_builder import RotateEncoderBuilder as rotate_builder
+from .rotate_attention.rotate_builder import RotateEncoderBuilder as rotate_builder
 from fast_transformers.feature_maps import GeneralizedRandomFeatures
 from functools import partial
 from apex import optimizers
