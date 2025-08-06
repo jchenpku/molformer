@@ -1,25 +1,24 @@
-Step 1: Launch a Modern Base Container
-We start with a newer NVIDIA CUDA development image (11.8 on Ubuntu 20.04) to ensure native support for modern GPU architectures and to provide a more up-to-date toolchain.
-Generated bash
+### **Final Guide: Manually Building a Compatible MolFormer Docker Environment**
 
-      
+This document outlines the step-by-step process to manually create a Docker environment for running the MolFormer embedding pipeline on modern NVIDIA GPUs (e.g., RTX 30/40-series). The process addresses several version incompatibilities between the original repository's dependencies, modern hardware, and newer software libraries.
+
+**Objective:** To create a persistent, GPU-enabled Docker container with a working MolFormer environment, capable of large-scale inference.
+
+**Step 1: Launch a Modern Base Container**  
+We start with a newer NVIDIA CUDA development image (11.8 on Ubuntu 20.04) to ensure native support for modern GPU architectures and to provide a more up-to-date toolchain.
+
+```bash
 # Launch an interactive container, mounting your project directory
 # Replace /path/to/your/project with your actual host path
 docker run -it --gpus all --name molformer-interactive \
   -v /path/to/your/project:/workspace \
   nvidia/cuda:11.8.0-devel-ubuntu20.04 bash
+```
 
-    
+**Step 2: Install System Dependencies**  
+Inside the container, update the system and install essential tools. Python 3.8 is the default `python3` on Ubuntu 20.04, simplifying setup.
 
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
-Step 2: Install System Dependencies
-Inside the container, update the system and install essential tools. Python 3.8 is the default python3 on Ubuntu 20.04, simplifying setup.
-Generated bash
-
-      
+```bash
 # Update package lists
 apt-get update
 
@@ -39,18 +38,12 @@ ln -sf /usr/bin/pip3 /usr/bin/pip
 
 # Clean up apt cache
 rm -rf /var/lib/apt/lists/*
+```
 
-    
+**Step 3: Install Python Packages in a Specific Order**  
+To resolve complex dependency conflicts between PyTorch, its dependencies, and other libraries like `lancedb`, we install packages in a specific, staged order.
 
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
-Step 3: Install Python Packages in a Specific Order
-To resolve complex dependency conflicts between PyTorch, its dependencies, and other libraries like lancedb, we install packages in a specific, staged order.
-Generated bash
-
-      
+```bash
 # Stage A: Upgrade build tools and pin a Python 3.8-compatible networkx version.
 # This prevents PyTorch 2.x from installing an incompatible version of networkx.
 pip install --upgrade pip setuptools wheel
@@ -70,18 +63,12 @@ pip install \
     pytorch-fast-transformers==0.4.0 \
     datasets==1.6.2 \
     pyarrow lmdb lancedb==0.6.1 pylance==0.10.6 tqdm
+```
 
-    
-
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
-Step 4: Clone, Patch, and Compile Apex
+**Step 4: Clone, Patch, and Compile Apex**  
 The official Apex repository's latest version uses Python 3.10+ syntax, which is incompatible with our Python 3.8 environment. The solution is to clone the latest code (which is compatible with PyTorch 2.x APIs) and then apply a small patch to remove the incompatible syntax before compiling.
-Generated bash
 
-      
+```bash
 # 1. Clone the latest Apex repository
 git clone https://github.com/NVIDIA/apex /tmp/apex
 cd /tmp/apex
@@ -98,18 +85,12 @@ python setup.py install --cpp_ext --cuda_ext
 # 5. Clean up the build files
 cd /
 rm -rf /tmp/apex
+```
 
-    
+**Step 5: Set up the MolFormer Code**  
+The MolFormer repository is not an installable package. The correct way to make its modules available is by adding its location to the `PYTHONPATH`.
 
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
-Step 5: Set up the MolFormer Code
-The MolFormer repository is not an installable package. The correct way to make its modules available is by adding its location to the PYTHONPATH.
-Generated bash
-
-      
+```bash
 # 1. Clone the repository
 git clone https://github.com/IBM/molformer.git /workspace/molformer
 
@@ -122,20 +103,13 @@ source ~/.bashrc
 # 4. Verify that it's set correctly
 echo $PYTHONPATH
 # The output should contain ':/workspace/molformer'
+```
+**Note:** The forked repository `jchenpku/molformer` is a great alternative that makes the code installable via `pip install -e .`. The method above works directly with the official IBM repository.
 
-    
-
-IGNORE_WHEN_COPYING_START
-Use code with caution. Bash
-IGNORE_WHEN_COPYING_END
-
-Note: The forked repository jchenpku/molformer is a great alternative that makes the code installable via pip install -e .. The method above works directly with the official IBM repository.
-
-Step 6: Final Cleanup and Committing the Image
+**Step 6: Final Cleanup and Committing the Image**  
 To create a clean, reusable image from your interactive session, clean up caches before exiting and committing.
-Generated bash
 
-      
+```bash
 # Clean up pip cache
 rm -rf ~/.cache/pip
 
@@ -148,5 +122,4 @@ docker commit \
   --change='CMD ["bash"]' \
   molformer-interactive \
   molformer-env:final
-
-    
+```
